@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Chai Hut design tokens (HSL triplets). Change the brand here, nowhere else. */
+@layer base {
+  :root {
+    --background: 38 45% 94%; /* cream */
+    --foreground: 20 15% 15%; /* charcoal */
+    --surface: 40 50% 99%; /* off-white cards */
+    --border: 33 25% 85%;
+    --input: 33 25% 80%;
+    --ring: 24 45% 30%;
+    --primary: 22 48% 22%; /* coffee brown */
+    --primary-foreground: 38 45% 96%;
+    --accent: 32 50% 52%; /* muted caramel */
+    --accent-foreground: 20 30% 12%;
+    --muted: 36 30% 90%;
+    --muted-foreground: 25 12% 38%;
+    --success: 142 60% 28%;
+    --success-foreground: 0 0% 100%;
+    --danger: 2 65% 42%;
+    --danger-foreground: 0 0% 100%;
+    --warning: 38 90% 38%;
+    --warning-foreground: 0 0% 100%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  /* Larger touch targets on tablets */
+  button,
+  [role="button"],
+  select {
+    touch-action: manipulation;
+  }
+}
+
+/* Printing: only the token slip (.print-area) is shown */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0;
+    margin: 0 auto;
+    max-width: 80mm;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
