@@ -1,0 +1,9 @@
+# Netlify builds the React app in frontend/. Set VITE_API_BASE_URL in Netlify's site settings
+# (Site configuration -> Environment variables) to your backend's https URL, with no trailing slash.
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"

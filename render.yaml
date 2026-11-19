@@ -1,0 +1,23 @@
+# Render "Blueprint": New -> Blueprint -> pick this repo. Render builds the Dockerfile and runs it.
+# The container applies migrations and creates the first owner on every start (no-op if one exists).
+services:
+  - type: web
+    name: chai-hut-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: JWT_SECRET_KEY
+        generateValue: true          # Render creates a long random secret for you
+      - key: DATABASE_URL
+        sync: false                  # you paste it in the Render dashboard (Supabase Session pooler, postgresql+psycopg://...)
+      - key: OWNER_USERNAME
+        sync: false
+      - key: OWNER_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false                  # your frontend's https URL, e.g. https://chai-hut.netlify.app
+      - key: BUSINESS_TIMEZONE
+        value: Asia/Kolkata

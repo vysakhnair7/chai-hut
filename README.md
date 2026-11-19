@@ -1,44 +1,189 @@
 # Chai Hut
 
-`app/` is the FastAPI backend, `frontend/` is the React web app. Sections 1–6 below document the backend; start with *Run the full stack*.
+A café management system for a corporate-café business: staff sign in (owner / manager / cashier), take orders with
+daily tokens, record payments, run corporate credit with month-end settlement, track expenses, and see revenue / profit reports.
 
-FastAPI + PostgreSQL + SQLAlchemy 2 + Pydantic v2 + JWT. Employee-only authentication with
-owner / manager / cashier roles enforced **on the server**, corporate customers identified by a
-Chai ID (UUID), orders with daily tokens, split payments, corporate credit with month-end
-settlement, expenses, and revenue / profit reports.
+* `app/` – backend API (FastAPI + PostgreSQL + JWT). Interactive API docs at `/docs`.
+* `frontend/` – web app (React + TypeScript + Tailwind). Different screens for each role.
 
-Interactive API docs (OpenAPI/Swagger): `http://localhost:8000/docs` · ReDoc: `/redoc` · schema: `/openapi.json`
-
----------------------------------------------------------------------------------------------
-
-## Run the full stack (backend + web app)
-
-1. **Backend** – follow section 1 below, and in the backend `.env` also set the web app's origin so the browser is allowed to call the API:
-
-   ```bash
-   CORS_ORIGINS=http://localhost:5173
-   ```
-
-   then `docker compose up --build` (or `uvicorn app.main:app --reload`). API docs: <http://localhost:8000/docs>.
-   Optionally load demo data: `docker compose exec api python -m app.utils.seed_demo` (prints random passwords once).
-
-2. **Frontend** – needs Node 20+:
-
-   ```bash
-   cd frontend
-   cp .env.example .env        # VITE_API_BASE_URL=http://localhost:8000 by default
-   npm install
-   npm run dev                 # http://localhost:5173
-   ```
-
-3. Sign in with the owner from `OWNER_USERNAME` / `OWNER_PASSWORD` (or a demo account). The owner can then add managers and cashiers under *Employee Management*.
-
-Frontend details, scripts, tests and an honest account of what has and has not been verified: [`frontend/README.md`](frontend/README.md).
-Developer conventions for both halves: [`CLAUDE.md`](CLAUDE.md).
+| Role | Can do |
+|---|---|
+| **Owner** | everything: dashboard, analytics and profit, products and categories, customers, orders, payments, dues, expenses, employees |
+| **Manager** | today's operations, customers, prices and stock, orders (cancel, discount), payments, dues, expenses. No profit, analytics or employees |
+| **Cashier** | place orders, print the token, move orders along, look customers up. No money screens |
 
 ---------------------------------------------------------------------------------------------
 
-## 1. Run it
+## Quick start (about 15 minutes, no coding needed)
+
+This runs everything on **your own computer**. Nothing is uploaded anywhere.
+
+### What you need first
+
+| Program | Why | Get it |
+|---|---|---|
+| **Docker Desktop** (Windows / Mac) or Docker Engine + Compose (Linux) | runs the database and backend | <https://www.docker.com/products/docker-desktop> |
+| **Node.js 20 or newer** (the "LTS" version) | runs the website | <https://nodejs.org> |
+
+* Start Docker Desktop and wait until it says **Engine running** before you continue.
+* You need a few GB of free disk space (Docker downloads images). You do **not** need Python or PostgreSQL.
+* Check Node: open a terminal and run `node -v`. It should print `v20` or higher.
+
+### Step 1 – Get the code
+
+* **Easiest:** on the GitHub page click the green **Code** button → **Download ZIP**, then unzip it
+  (Windows: right-click → *Extract All*). You get a folder such as `chai-hut-main`.
+* Or with git: `git clone <the repo URL>`
+
+### Step 2 – Open a terminal inside that folder
+
+* **Windows:** open the folder in File Explorer, click the address bar, type `powershell`, press Enter.
+* **Mac:** right-click the folder → *New Terminal at Folder* (or `cd` into it).
+* **Linux:** open a terminal in the folder.
+
+Everything below is typed into that terminal. The folder you are in must contain `docker-compose.yml`.
+
+### Step 3 – Create your settings file (`.env`)
+
+Copy the template:
+
+```bash
+# Windows PowerShell
+copy .env.example .env
+# Mac / Linux
+cp .env.example .env
+```
+
+Open `.env` in a text editor (`notepad .env` on Windows, `open -e .env` on Mac, `nano .env` on Linux) and fill in these four lines.
+No spaces around `=`, no quotes:
+
+| Line | What to put |
+|---|---|
+| `POSTGRES_PASSWORD=` | a password for the database, **letters and digits only**, e.g. `Tea2026dbpass` |
+| `OWNER_USERNAME=` | the login name of the first user, **lowercase, no spaces**, e.g. `owner` |
+| `OWNER_PASSWORD=` | that user's password: **10+ characters with letters and digits**, e.g. `ChaiBoss2026` |
+| `JWT_SECRET_KEY=` | a long random string, **at least 32 characters** (generate one below) |
+
+Generate the `JWT_SECRET_KEY` value, copy the output, and paste it after the `=`:
+
+```bash
+# Windows PowerShell
+$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); ($b | ForEach-Object { $_.ToString("x2") }) -join ""
+# Mac / Linux
+openssl rand -hex 32
+```
+
+Leave every other line as it is. `CORS_ORIGINS=http://localhost:5173` is already set; it lets the website talk to the backend.
+**Never share or commit your `.env`** (it is already in `.gitignore`).
+
+### Step 4 – Start the backend
+
+Choose **one**:
+
+**A. Empty system** (you add your own menu and staff):
+
+```bash
+docker compose up --build
+```
+
+**B. With demo data** (sample menu, customers, and three demo users). Run this **once, before the first `up`**:
+
+```bash
+docker compose run --rm api sh -c "alembic upgrade head && python -m app.utils.seed_demo"
+```
+
+It prints three logins (`demo.owner`, `demo.manager`, `demo.cashier`) with random passwords. **They are shown only once. Copy them now.**
+Then start the backend:
+
+```bash
+docker compose up
+```
+
+(With B you sign in as `demo.owner`; the `OWNER_USERNAME` account is not created because an owner already exists.)
+
+The first run takes a few minutes. It is ready when you see `Uvicorn running on http://0.0.0.0:8000`.
+**Leave this window open.** Check it by opening <http://localhost:8000/docs>; you should see the API page.
+
+### Step 5 – Start the website
+
+Open a **second** terminal in the same folder:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+`npm install` takes a minute or two (yellow warnings are normal). When it prints `Local: http://localhost:5173/`, open
+**<http://localhost:5173>** in your browser.
+
+> **Windows PowerShell says "running scripts is disabled"?** Run this once, answer `Y`, then repeat Step 5:
+> `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
+> (or use *Command Prompt* instead of PowerShell).
+
+### Step 6 – Sign in and try it
+
+Sign in with the owner account (from Step 3, or `demo.owner` if you used the demo data). Suggested tour:
+
+1. **Owner:** *Dashboard*, then *Employee Management* → add a manager and a cashier (skip this if you loaded the demo users).
+2. **Cashier** (log out, log in as the cashier): *New Order* → tap items → *Place order* → a token appears with a *Print token* button.
+   *Active Orders* → move the order Placed → Preparing → Ready → Completed.
+3. **Manager:** *Orders* → open an order → *Record payment*. Try a corporate customer: pay by **Corporate credit**, then settle it in *Outstanding Dues*.
+4. **Owner:** *Analytics & Reports*. Profit shows "—" if any sold item has no cost price (set it in *Products & Menu*).
+
+Without demo data the menu is empty: as owner go to *Products & Menu* → *Categories* → add one, then *Add product*.
+
+---------------------------------------------------------------------------------------------
+
+## Day-to-day
+
+| I want to… | Do this |
+|---|---|
+| Start again later | Docker Desktop running → `docker compose up` in the project folder; then `npm run dev` in `frontend/`. Your data is kept |
+| Stop | `Ctrl + C` in each terminal, then `docker compose down` (data is kept) |
+| **Wipe everything** and start fresh | `docker compose down -v` (deletes the database), then Step 4 again |
+| Change a setting in `.env` | stop with `Ctrl + C`, edit `.env`, run `docker compose up` again |
+
+## Troubleshooting
+
+| What you see | Fix |
+|---|---|
+| `docker` is not recognized / cannot connect to the Docker daemon | Docker Desktop is not installed or not running. Start it and wait for **Engine running** |
+| `set JWT_SECRET_KEY in .env` (or `OWNER_USERNAME`, `POSTGRES_PASSWORD`…) | that line in `.env` is empty. Fill it in |
+| `String should have at least 32 characters` / `jwt_secret_key` | the secret is too short. Generate a new one (Step 3) |
+| Website says **"Cannot reach the Chai Hut server"** | backend not running (Step 4), or `CORS_ORIGINS=http://localhost:5173` is missing/changed in `.env`. Fix, then restart with `docker compose up` |
+| Login says wrong username or password | usernames are lowercase. Use exactly the `OWNER_USERNAME`/`OWNER_PASSWORD` in your `.env`. **Changing `.env` later does not change an existing user**: reset with `docker compose down -v` |
+| `Users already exist; refusing to seed` | demo data only loads into a database with no users. Run `docker compose down -v`, then Step 4B |
+| `port is already allocated` (8000, 5173 or 5432) | another program uses that port. Close it, or stop other Docker projects |
+| `npm` is not recognized | close and reopen the terminal; if it persists, reinstall Node.js |
+| PowerShell: "running scripts is disabled" | see the note under Step 5 |
+
+## Run the tests
+
+```bash
+# backend (starts a throwaway test database, your data is untouched)
+docker compose --profile test run --rm tests
+
+# frontend
+cd frontend
+npm run typecheck && npm run lint && npm test && npm run build
+```
+
+**Status:** the frontend was written without being able to run `npm install`, lint, the tests or the production build in the author's
+environment; see "Verification status" in [`frontend/README.md`](frontend/README.md). If one of those fails on your machine, that is useful
+information, so please report it.
+
+## More documentation
+
+* [`frontend/README.md`](frontend/README.md) – the web app: scripts, configuration, structure, known gaps
+* [`frontend/docs/`](frontend/docs/) – API mapping (and where the spec and backend differ), architecture, plan
+* [`docs/DEPLOY.md`](docs/DEPLOY.md) – *optional, not needed to run locally*: putting it online (Supabase database + Render + Netlify)
+* [`CLAUDE.md`](CLAUDE.md) – conventions for working on the code (also useful for AI coding assistants)
+* Backend reference (permissions, business rules, layout): sections 1–6 below
+
+---------------------------------------------------------------------------------------------
+
+## 1. Backend run options (reference)
 
 ### Option A – Docker (recommended, nothing else to install)
 
@@ -52,12 +197,9 @@ docker compose up --build
 On start the container applies the migrations, creates the first owner from `OWNER_USERNAME` /
 `OWNER_PASSWORD` (skipped if an owner already exists) and serves on port 8000.
 
-Load demo data (menu, expense categories, three corporate customers, one user per role with
-**random passwords printed once**):
-
-```bash
-docker compose exec api python -m app.utils.seed_demo      # only works on an empty users table
-```
+Demo data (menu, expense categories, three corporate customers, and demo.owner / demo.manager / demo.cashier users
+with **random passwords printed once**) can only be loaded into a database that has **no users yet**. The container creates
+the owner on every start, so load the demo data *before* the first `docker compose up` (see "Quick start → Demo data" at the top).
 
 ### Option B – local Python
 
